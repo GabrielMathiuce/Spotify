@@ -1,22 +1,24 @@
 package com.spotify.artists.services;
 
 import com.spotify.artists.classes.Artist;
-import com.spotify.http.WebClientService;
+import com.spotify.http.classes.CustomHtttpRequest;
+import com.spotify.http.services.WebClientService;
+import com.spotify.http.urls.Urls;
+import com.spotify.utils.JsonUtils;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ArtistsService {
 
-    private WebClientService webClientService;
+    private final WebClientService webClientService;
 
     public ArtistsService(WebClientService webClientService) {
         this.webClientService = webClientService;
     }
 
     public ResponseEntity<Artist> getArtistById(String id, String token) {
-        return new ResponseEntity<>(webClientService.createHttpRequest(HttpMethod.GET, "https://api.spotify.com/v1/artists/" + id, "", token), HttpStatus.OK);
+        return ResponseEntity.ok().body(JsonUtils.convertJsonToPOJO(webClientService.createJsonHttpRequest(new CustomHtttpRequest(HttpMethod.GET, Urls.ARTISTS_URL + id, "", token)).getBody(), Artist.class));
     }
 }
