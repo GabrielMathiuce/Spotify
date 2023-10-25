@@ -7,6 +7,7 @@ import com.spotify.login.classes.Client;
 import com.spotify.login.classes.Token;
 import com.spotify.utils.JsonUtils;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,6 @@ public class LoginService {
     }
 
     public ResponseEntity<String> getBearerToken(Client client) {
-        return ResponseEntity.ok().body(JsonUtils.convertJsonToPOJO(restTemplateService.createUrlEncodedHttpRequest(new CustomHttpRequest(HttpMethod.POST, Urls.TOKEN_URL, client)).getBody(), Token.class).getAccessToken());
+        return ResponseEntity.ok().body(JsonUtils.convertJsonToPOJO(restTemplateService.createHttpRequest(new CustomHttpRequest(HttpMethod.POST, Urls.TOKEN_URL, client), MediaType.APPLICATION_FORM_URLENCODED).getBody(), Token.class).getAccessToken());
     }
 }

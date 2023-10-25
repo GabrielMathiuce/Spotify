@@ -1,5 +1,6 @@
 package com.spotify.http.services;
 
+import com.spotify.exceptions.MediaTypeNotSupportedException;
 import com.spotify.http.classes.CustomHttpRequest;
 import com.spotify.http.classes.CustomResponseErrorHandler;
 import com.spotify.login.classes.Client;
@@ -11,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -20,34 +20,30 @@ import java.util.Map;
 @Service
 public class RestTemplateService {
 
-    RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
+    private final RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
 
-    public ResponseEntity<String> createJsonHttpRequest(CustomHttpRequest customHttpRequest)  {
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(customHttpRequest.getUrl());
-
-        restTemplate.setErrorHandler(new CustomResponseErrorHandler());
-
-        setHeaders(customHttpRequest, MediaType.APPLICATION_JSON);
-        setQueryParams(customHttpRequest, uriComponentsBuilder);
-        setToken(customHttpRequest);
-
-        HttpEntity<Object> entity = new HttpEntity<>(customHttpRequest.getBody(), customHttpRequest.getHttpHeaders());
-        return restTemplate.exchange(uriComponentsBuilder.toUriString(), customHttpRequest.getMethod(), entity, String.class);
+    public RestTemplateService() {
+        this.restTemplate.setErrorHandler(new CustomResponseErrorHandler());
     }
 
-    public ResponseEntity<String> createUrlEncodedHttpRequest(CustomHttpRequest customHttpRequest) {
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(customHttpRequest.getUrl());
+    public ResponseEntity<String> createHttpRequest(CustomHttpRequest customHttpRequest, MediaType mediaType)  {
+        return restTemplate.exchange(customHttpRequest.getUrl(), customHttpRequest.getMethod(), createHttpEntity(customHttpRequest, mediaType), String.class);
+    }
 
-        restTemplate.setErrorHandler(new CustomResponseErrorHandler());
-        setHeaders(customHttpRequest, MediaType.APPLICATION_FORM_URLENCODED);
+    private UriComponentsBuilder createUriComponentsBuilder(CustomHttpRequest customHttpRequest) {
+        return UriComponentsBuilder.fromUriString(customHttpRequest.getUrl());
+    }
+
+    private HttpEntity<Object> createHttpEntity(CustomHttpRequest customHttpRequest, MediaType mediaType) {
+
+        setHeaders(customHttpRequest, mediaType);
         setToken(customHttpRequest);
+        setQueryParams(customHttpRequest, createUriComponentsBuilder(customHttpRequest));
         setUrlEncodedBody(customHttpRequest);
 
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(customHttpRequest.getUrlEncodedBody(), httpHeaders);
-        return restTemplate.exchange(uriComponentsBuilder.toUriString(), customHttpRequest.getMethod(), entity, String.class);
+        if(mediaType.equals(MediaType.APPLICATION_JSON)) return new HttpEntity<>(customHttpRequest.getBody(), customHttpRequest.getHttpHeaders());
+        else if(mediaType.equals(MediaType.APPLICATION_FORM_URLENCODED)) return new HttpEntity<>(customHttpRequest.getUrlEncodedBody(), customHttpRequest.getHttpHeaders());
+        else throw new MediaTypeNotSupportedException("The following media type is not supported for sending requests " + mediaType);
     }
 
     private void setHeaders(CustomHttpRequest customHttpRequest, MediaType mediaType) {
